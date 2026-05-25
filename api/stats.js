@@ -130,45 +130,40 @@ async function fetchJustGivingTotal() {
   let goal = 0;
   let matched_pattern = null;
 
-  // Try many patterns - JustGiving's HTML varies
-  const patterns = [
-    { name: 'totalRaisedAmount', re: /"totalRaisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'amountRaised', re: /"amountRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'raisedAmount', re: /"raisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'totalRaised', re: /"totalRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'donationSummary.totalAmount', re: /"donationSummary"[^}]*"totalAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'data-amount-raised', re: /data-amount-raised="?£?\s*([\d,.]+)"?/i },
-    { name: 'currentAmount', re: /"currentAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-    { name: 'GBP-amount-of', re: /£([\d,]+(?:\.\d{2})?)\s*(?:raised|of)/i }
-  ];
+  // PRIMARY METHOD: JustGiving renders the £ amounts in a predictable order
+  // in their page HTML. First we collect ALL distinct £ amounts on the page.
+  const allMatches = html.match(/£\s*[\d,]+(?:\.\d{1,2})?/g) || [];
+  const uniqueAmounts = [...new Set(allMatches)];
+  const parsed = uniqueAmounts
+    .map(s => parseFloat(s.replace(/[£,\s]/g, '')))
+    .filter(n => !isNaN(n));
 
-  for (const p of patterns) {
-    const m = html.match(p.re);
-    if (m && parseFloat(m[1].replace(/,/g, '')) > 0) {
-      raised = parseFloat(m[1].replace(/,/g, ''));
-      matched_pattern = p.name;
-      break;
-    }
+  // Observed pattern: first £ amount on the page is the target/goal,
+  // second is the amount raised. Tiers (£25, £50 etc) come later.
+  if (parsed.length >= 2) {
+    goal = parsed[0];
+    raised = parsed[1];
+    matched_pattern = 'money-phrase-order';
   }
 
-  const goalPatterns = [
-    /"targetAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i,
-    /"goalAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i,
-    /"target"\s*:\s*"?£?\s*([\d,.]+)"?/i,
-    /of\s+£([\d,]+(?:\.\d{2})?)/i
-  ];
-
-  for (const re of goalPatterns) {
-    const m = html.match(re);
-    if (m) {
-      goal = parseFloat(m[1].replace(/,/g, ''));
-      if (goal > 0) break;
+  // FALLBACK: try named JSON patterns in case the layout changes
+  if (raised === 0) {
+    const patterns = [
+      { name: 'totalRaisedAmount', re: /"totalRaisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+      { name: 'amountRaised', re: /"amountRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+      { name: 'raisedAmount', re: /"raisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+      { name: 'totalRaised', re: /"totalRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+      { name: 'currentAmount', re: /"currentAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i }
+    ];
+    for (const p of patterns) {
+      const m = html.match(p.re);
+      if (m && parseFloat(m[1].replace(/,/g, '')) > 0) {
+        raised = parseFloat(m[1].replace(/,/g, ''));
+        matched_pattern = p.name;
+        break;
+      }
     }
   }
-
-  // Debug payload - shows snippets of the HTML so we can see what's actually there
-  // To enable, hit /api/stats?debug=1
-  const debug = process.env.DEBUG_JG || null;
 
   return {
     raised,
@@ -176,25 +171,8 @@ async function fetchJustGivingTotal() {
     page_url: url,
     matched_pattern,
     _debug: {
-      html_length: html.length,
-      contains_pound: html.includes('£'),
-      contains_raised_word: html.toLowerCase().includes('raised'),
-      // Pull a 600-character window around the first mention of the donation amount
-      pound_context: extractPoundContext(html),
-      // Try to find any number that looks like a £ amount
-      first_money_phrases: findMoneyPhrases(html)
+      unique_money_phrases: uniqueAmounts.slice(0, 10),
+      html_length: html.length
     }
   };
-}
-
-function extractPoundContext(html) {
-  const idx = html.indexOf('£');
-  if (idx === -1) return null;
-  return html.substring(Math.max(0, idx - 100), idx + 300).replace(/\s+/g, ' ');
-}
-
-function findMoneyPhrases(html) {
-  // Find first 5 distinct £ amount mentions
-  const matches = html.match(/£\s*[\d,]+(?:\.\d{2})?/g) || [];
-  return [...new Set(matches)].slice(0, 10);
 }
