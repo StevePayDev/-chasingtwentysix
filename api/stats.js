@@ -56,11 +56,14 @@ async function fetchStravaStats() {
   const activities = await actRes.json();
 
   // 3. Filter to runs only, from training start date onwards
-  const TRAINING_START = new Date('2026-05-24T00:00:00Z');
+  // Use local date string comparison to avoid any timezone edge cases
+  const TRAINING_START = '2026-05-24'; // YYYY-MM-DD, inclusive
   const runs = activities.filter(a => {
     const isRun = a.type === 'Run' || a.sport_type === 'Run';
     if (!isRun) return false;
-    return new Date(a.start_date) >= TRAINING_START;
+    // start_date_local is in the athlete's local timezone, format: 2026-05-24T09:00:00Z
+    const runDate = (a.start_date_local || a.start_date || '').slice(0, 10);
+    return runDate >= TRAINING_START;
   });
 
   const metresToMiles = m => m / 1609.344;
@@ -147,6 +150,4 @@ async function fetchJustGivingTotal() {
     goal: goal || 3500,
     page_url: url
   };
-}
-
 }
