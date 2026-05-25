@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chasing 26.2 — Stephen Payne · London Marathon 2027</title>
+<meta name="description" content="Stephen Payne's London Marathon 2027 charity campaign — training log, fundraising progress, and event calendar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bungee&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* ============ CONFIG ============ */
+  /* Theme colours - change these to retheme the whole site */
+  :root {
+    --red: #e63946;
+    --cream: #f4ead5;
+    --ink: #1a1612;
+    --mustard: #e9b44c;
+    --cream-dark: #e8dfca;
+    --row-alt: #ebe1c8;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--cream); color: var(--ink); font-family: 'Space Mono', monospace; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  button { cursor: pointer; font-family: inherit; border: none; background: none; }
+  input, textarea, select {
+    font-family: 'Space Mono', monospace;
+    color: var(--ink);
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    padding: 8px;
+    width: 100%;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  input::placeholder, textarea::placeholder { color: rgba(26,22,18,0.4); }
+  input[type="date"] { color-scheme: light; }
+
+  .anton { font-family: 'Anton', 'Impact', sans-serif; letter-spacing: -0.02em; }
+  .bungee { font-family: 'Bungee', 'Impact', sans-serif; }
+  .serif { font-family: 'DM Serif Display', Georgia, serif; }
+  .hand { font-family: 'Caveat', cursive; }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  /* Layout helpers */
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .px { padding-left: 24px; padding-right: 24px; }
+  @media (min-width: 768px) { .px { padding-left: 48px; padding-right: 48px; } }
+  .text-center { text-align: center; }
+  .hide-mobile { display: none; }
+  @media (min-width: 768px) { .hide-mobile { display: block; } }
+
+  /* Texture */
+  .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(230, 57, 70, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(233, 180, 76, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 1px 1px, rgba(26, 22, 18, 0.08) 1px, transparent 0);
+    background-size: 100% 100%, 100% 100%, 3px 3px;
+  }
+
+  /* Ticker */
+  .ticker { overflow: hidden; white-space: nowrap; padding: 12px 0; border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); background: var(--ink); color: var(--cream); }
+  .ticker-track { display: inline-block; animation: tick 25s linear infinite; font-family: 'Bungee', sans-serif; font-size: 14px; letter-spacing: 0.05em; }
+  @keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .ticker .red { color: var(--red); }
+  .ticker .mustard { color: var(--mustard); }
+
+  /* Stamps */
+  .stamp { display: inline-block; border: 3px double currentColor; padding: 8px 16px; font-family: 'Bungee', sans-serif; font-size: 11px; letter-spacing: 0.1em; }
+  .stamp-l { position: absolute; top: 24px; left: 24px; color: var(--red); transform: rotate(-8deg); z-index: 2; }
+  .stamp-r { position: absolute; top: 24px; right: 24px; color: var(--ink); transform: rotate(6deg); z-index: 2; }
+
+  /* Hero */
+  .hero { position: relative; min-height: 85vh; padding: 130px 24px 0; text-align: center; }
+  .hero h1 { font-family: 'Anton', sans-serif; font-weight: bold; line-height: 0.85; font-size: clamp(56px, 14vw, 200px); color: var(--ink); margin-bottom: 32px; }
+  .hero h1 .red { color: var(--red); }
+  .hero h1 .italic { font-family: 'DM Serif Display', serif; font-style: italic; font-weight: normal; }
+  .hero .eyebrow { font-family: 'Bungee', sans-serif; color: var(--red); letter-spacing: 0.3em; margin-bottom: 24px; font-size: 14px; }
+  .hero .tagline { font-family: 'Caveat', cursive; font-size: clamp(28px, 5vw, 48px); transform: rotate(-2deg); display: inline-block; margin-top: 8px; }
+
+  /* Race info strip */
+  .race-strip { background: var(--red); color: var(--cream); border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); padding: 16px 24px; margin-top: 32px; }
+  .race-strip-inner { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 16px; text-align: center; }
+  .race-strip .label { font-family: 'Bungee', sans-serif; font-size: 11px; opacity: 0.8; }
+  .race-strip .value { font-family: 'Anton', sans-serif; font-size: clamp(20px, 4vw, 36px); }
+  .race-strip .x { font-size: 20px; }
+
+  /* Sections */
+  section { padding: 80px 0; }
+  .scribble {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12'%3E%3Cpath d='M2 8 Q 30 2, 60 6 T 120 6 T 198 7' stroke='%23e63946' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: bottom left;
+    background-size: 100% 12px;
+    padding-bottom: 14px;
+  }
+
+  /* Why grid */
+  .why-grid { display: grid; grid-template-columns: 1fr; gap: 32px; }
+  @media (min-width: 768px) { .why-grid { grid-template-columns: 7fr 5fr; } }
+  .why-grid h2 { font-family: 'Anton', sans-serif; font-size: clamp(40px, 7vw, 84px); line-height: 0.95; margin-bottom: 24px; }
+  .why-grid .eyebrow { font-family: 'Bungee', sans-serif; color: var(--red); letter-spacing: 0.3em; font-size: 12px; margin-bottom: 12px; }
+  .why-grid p { font-size: 18px; line-height: 1.6; margin-bottom: 16px; }
+  .why-grid .highlight { background: var(--mustard); padding: 0 4px; }
+  .cause-card { background: var(--ink); color: var(--cream); padding: 24px; position: relative; box-shadow: 6px 6px 0 var(--ink); }
+  .cause-card .star { position: absolute; top: -12px; right: -12px; font-family: 'Caveat', cursive; font-size: 32px; color: var(--mustard); transform: rotate(8deg); animation: pulse 3s ease-in-out infinite; }
+  .cause-card h3 { font-family: 'Anton', sans-serif; font-size: 36px; margin: 16px 0; }
+  .cause-card p { font-size: 14px; line-height: 1.6; opacity: 0.9; margin-bottom: 16px; }
+  .cause-card .btn { display: inline-block; font-family: 'Bungee', sans-serif; font-size: 14px; border: 2px solid var(--cream); padding: 8px 16px; }
+
+  /* Approach grid */
+  .approach { margin-top: 64px; }
+  .approach-title { font-family: 'Bungee', sans-serif; color: var(--red); letter-spacing: 0.3em; font-size: 12px; text-align: center; margin-bottom: 24px; }
+  .approach-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 768px) { .approach-grid { grid-template-columns: repeat(4, 1fr); } }
+  .approach-card { padding: 20px; border: 2px solid var(--ink); background: var(--cream); }
+  .approach-card .num { font-family: 'Anton', sans-serif; font-size: 36px; color: var(--red); margin-bottom: 8px; }
+  .approach-card .label { font-family: 'Bungee', sans-serif; font-size: 12px; margin-bottom: 8px; }
+  .approach-card p { font-size: 14px; }
+
+  /* Counter section (donate) */
+  .counter-section { color: var(--cream); padding: 80px 24px; background-image: repeating-linear-gradient(-45deg, var(--red), var(--red) 12px, #c41e3a 12px, #c41e3a 24px); }
+  .counter-section .eyebrow { font-family: 'Bungee', sans-serif; color: var(--mustard); letter-spacing: 0.3em; font-size: 12px; margin-bottom: 12px; text-align: center; }
+  .counter-mega { font-family: 'Anton', sans-serif; font-weight: bold; font-size: clamp(72px, 18vw, 200px); line-height: 0.85; color: var(--cream); text-shadow: 6px 6px 0 var(--ink); text-align: center; animation: pulse 3s ease-in-out infinite; }
+  .counter-sub { font-family: 'Anton', sans-serif; font-size: clamp(24px, 4vw, 48px); text-align: center; opacity: 0.8; margin-top: 8px; margin-bottom: 32px; }
+  .progress-wrap { max-width: 700px; margin: 0 auto 32px; }
+  .progress-bar { height: 48px; border: 4px solid var(--ink); background: var(--cream); position: relative; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--ink); background-image: radial-gradient(circle, var(--mustard) 1.5px, transparent 2px); background-size: 6px 6px; transition: width 1s; }
+  .progress-flag { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+  .progress-flag .label { position: absolute; top: -24px; left: 4px; font-family: 'Anton', sans-serif; font-size: 12px; color: var(--ink); white-space: nowrap; }
+  .progress-runner { position: absolute; top: -4px; font-size: 24px; transition: left 1s; }
+  .progress-ends { display: flex; justify-content: space-between; margin-top: 12px; font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .donate-cta { text-align: center; }
+  .donate-card { display: inline-block; background: var(--cream); color: var(--ink); padding: 24px; box-shadow: 6px 6px 0 var(--red); }
+  .donate-card .scrawl { font-family: 'Caveat', cursive; font-size: 22px; color: var(--red); margin-bottom: 8px; }
+  .donate-btn { display: inline-block; font-family: 'Bungee', sans-serif; font-size: 18px; padding: 16px 32px; background: var(--ink); color: var(--cream); }
+
+  /* Training */
+  .training-title { font-family: 'Anton', sans-serif; font-size: clamp(40px, 8vw, 96px); line-height: 1; text-align: center; margin-bottom: 48px; }
+  .training-title .red { color: var(--red); }
+  .stat-grid { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 64px; }
+  @media (min-width: 768px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+  .stat-card { padding: 24px; text-align: center; box-shadow: 6px 6px 0 var(--ink); }
+  .stat-card.red { background: var(--red); color: var(--cream); }
+  .stat-card.ink { background: var(--ink); color: var(--cream); }
+  .stat-card.mustard { background: var(--mustard); color: var(--ink); }
+  .stat-card .label { font-family: 'Bungee', sans-serif; font-size: 12px; opacity: 0.8; margin-bottom: 8px; }
+  .stat-card.ink .label { color: var(--mustard); }
+  .stat-card .big { font-family: 'Anton', sans-serif; font-size: 72px; line-height: 1; }
+  .stat-card .big small { font-size: 28px; }
+  .stat-card .note { font-family: 'Caveat', cursive; font-size: 20px; margin-top: 4px; }
+  .stat-card.ink .note { color: var(--mustard); }
+
+  /* Log */
+  .log-header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 4px solid var(--ink); padding-bottom: 12px; margin-bottom: 24px; }
+  .log-header h3 { font-family: 'Anton', sans-serif; font-size: 28px; }
+  .log-header span { font-family: 'Space Mono', monospace; font-size: 12px; text-transform: uppercase; }
+  .log-empty { text-align: center; padding: 48px 24px; border: 4px dashed var(--ink); }
+  .log-empty .hand { font-family: 'Caveat', cursive; font-size: 36px; margin-bottom: 8px; }
+  .log-empty .mono { font-size: 14px; opacity: 0.6; }
+  .log-row { display: grid; grid-template-columns: 2fr 2fr 2fr 5fr 1fr; gap: 12px; padding: 16px; align-items: center; border: 2px solid var(--ink); margin-bottom: 12px; }
+  @media (max-width: 767px) { .log-row { grid-template-columns: 1fr 1fr; } .log-row .col-note { grid-column: 1 / 3; } .log-row .col-link { grid-column: 1 / 3; text-align: left; } }
+  .log-row:nth-child(even) { background: var(--row-alt); }
+  .log-row .date-big { font-family: 'Anton', sans-serif; font-size: 22px; line-height: 1; }
+  .log-row .session-num { font-family: 'Space Mono', monospace; font-size: 10px; opacity: 0.5; }
+  .log-row .dist { font-family: 'Anton', sans-serif; font-size: 32px; line-height: 1; color: var(--red); text-align: center; }
+  .log-row .dist-label { font-family: 'Bungee', sans-serif; font-size: 10px; text-align: center; }
+  .log-row .time { font-size: 14px; }
+  .log-row .col-note { font-family: 'Caveat', cursive; font-size: 18px; }
+  .log-row .col-link { text-align: right; }
+  .log-row .col-link a { font-family: 'Bungee', sans-serif; font-size: 12px; color: var(--red); }
+
+  /* Events */
+  .events { background: var(--ink); color: var(--cream); padding: 80px 24px; }
+  .events-title { font-family: 'Anton', sans-serif; font-size: clamp(40px, 8vw, 96px); line-height: 1; text-align: center; margin-bottom: 16px; }
+  .events-title .red { color: var(--red); }
+  .events-title .italic { font-family: 'DM Serif Display', serif; font-style: italic; }
+  .events-sub { font-family: 'Caveat', cursive; font-size: 22px; color: var(--mustard); text-align: center; margin-bottom: 48px; }
+  .events-eyebrow { font-family: 'Bungee', sans-serif; color: var(--mustard); letter-spacing: 0.3em; font-size: 12px; margin-bottom: 12px; text-align: center; }
+  .events-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  @media (min-width: 768px) { .events-grid { grid-template-columns: 1fr 1fr; } }
+  .event-card { background: var(--cream); color: var(--ink); padding: 24px; position: relative; box-shadow: 6px 6px 0 var(--red); }
+  .event-card .date-badge { position: absolute; top: -12px; left: -12px; background: var(--red); color: var(--cream); font-family: 'Anton', sans-serif; font-size: 12px; padding: 4px 12px; }
+  .event-card h3 { font-family: 'Anton', sans-serif; font-size: 28px; margin: 8px 0; }
+  .event-card p { font-size: 14px; }
+  .events-empty { text-align: center; padding: 48px 24px; border: 4px dashed var(--cream); }
+  .events-empty .hand { font-family: 'Caveat', cursive; font-size: 36px; margin-bottom: 8px; }
+  .events-empty .mono { font-size: 14px; opacity: 0.6; }
+
+  /* Admin */
+  .admin-toggle { font-family: 'Bungee', sans-serif; font-size: 12px; padding: 8px 16px; border: 2px solid var(--ink); }
+  .admin-panel { display: none; margin-top: 24px; grid-template-columns: 1fr; gap: 24px; }
+  .admin-panel.open { display: grid; }
+  @media (min-width: 768px) { .admin-panel.open { grid-template-columns: repeat(3, 1fr); } }
+  .admin-card { padding: 20px; border: 4px solid var(--ink); background: var(--cream); }
+  .admin-card.mustard { background: var(--mustard); }
+  .admin-card h4 { font-family: 'Anton', sans-serif; font-size: 24px; margin-bottom: 12px; }
+  .admin-card .save { font-family: 'Caveat', cursive; font-size: 18px; }
+  .admin-card .desc { font-size: 12px; margin-bottom: 8px; }
+  .btn-primary { width: 100%; font-family: 'Bungee', sans-serif; font-size: 14px; padding: 8px; background: var(--red); color: var(--cream); border: none; cursor: pointer; }
+  .btn-secondary { width: 100%; font-family: 'Space Mono', monospace; font-size: 12px; padding: 8px; border: 2px solid var(--ink); background: transparent; margin-top: 8px; cursor: pointer; }
+  .admin-card input.big-num { padding: 12px; font-size: 24px; font-family: 'Anton', sans-serif; }
+
+  /* Footer */
+  footer { padding: 48px 24px; text-align: center; border-top: 4px solid var(--ink); background-image: repeating-linear-gradient(45deg, var(--cream), var(--cream) 8px, var(--cream-dark) 8px, var(--cream-dark) 16px); }
+  footer .big { font-family: 'Anton', sans-serif; font-size: clamp(48px, 10vw, 84px); color: var(--ink); }
+  footer .thanks { font-family: 'Caveat', cursive; font-size: 24px; color: var(--red); margin-top: 8px; }
+  footer .credit { font-family: 'Space Mono', monospace; font-size: 12px; opacity: 0.5; margin-top: 24px; }
+
+  /* Share buttons */
+  .share-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .share-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 6px 10px;
+    border: 2px solid var(--ink);
+    background: var(--cream);
+    color: var(--ink);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.1s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .share-btn:hover { background: var(--red); color: var(--cream); border-color: var(--red); }
+  .share-btn.copied { background: var(--mustard); color: var(--ink); }
+
+  /* Footer share */
+  .footer-share { margin-top: 20px; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .footer-qr { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center; }
+
+  /* Animations */
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+  .pulse { animation: pulse 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- ============ TICKER ============ -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- ============ HERO ============ -->
+<section class="hero paper-grain">
+  <span class="stamp stamp-l">WHIZZ KIDZ · 2027</span>
+  <span class="stamp stamp-r">OFFICIAL ENTRY</span>
+
+  <div class="eyebrow">★ ★ ★ &nbsp; THE OFFICIAL CAMPAIGN &nbsp; ★ ★ ★</div>
+  <h1>
+    CHASING<br>
+    <span class="red">TWENTY-SIX</span><br>
+    <span class="italic">point two.</span>
+  </h1>
+  <p class="tagline">...because some runs are bigger than the distance.</p>
+
+  <div class="race-strip">
+    <div class="race-strip-inner">
+      <div>
+        <div class="label">RACE DAY</div>
+        <div class="value">25 · APR · 27</div>
+      </div>
+      <div class="x">✕</div>
+      <div>
+        <div class="label">START</div>
+        <div class="value">BLACKHEATH</div>
+      </div>
+      <div class="x">✕</div>
+      <div>
+        <div class="label">FINISH</div>
+        <div class="value">THE MALL</div>
+      </div>
+      <div class="x">✕</div>
+      <div>
+        <div class="label">DAYS LEFT</div>
+        <div class="value pulse" id="days-to-go">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY ============ -->
+<section class="paper-grain px">
+  <div class="wrap">
+    <div class="why-grid">
+      <div>
+        <div class="eyebrow">① &nbsp; THE WHY</div>
+        <h2>No dramatic story. <span class="scribble">Just commitment.</span></h2>
+        <p>Running has become a major part of my life over the last few years — I train consistently each week and regularly cover <strong class="highlight">half marathon distances</strong>. London has been a long term goal, and combining it with meaningful fundraising feels like the right way to take it on.</p>
+        <p>If I'm going to run 26.2 miles, I'd rather do it for a cause where the effort makes a genuine impact than simply for myself. This page exists to back that up — every training mile logged, every fundraising effort tracked, in public for everyone to see, in real time.</p>
+      </div>
+      <div>
+        <div class="cause-card">
+          <div class="star">★ the cause ★</div>
+          <div style="font-family:'Bungee',sans-serif;color:var(--red);letter-spacing:0.3em;font-size:12px;margin-top:16px;margin-bottom:12px;">RUNNING FOR</div>
+          <h3>Whizz Kidz</h3>
+          <p>I chose Whizz Kidz from a shortlist of children's charities because the impact is concrete. Around <strong>75,000 young people</strong> in the UK need a wheelchair to be mobile, and Whizz Kidz exists to give them the equipment, skills and confidence to go further — at home, at school, at work and beyond.</p>
+          <p style="margin-top:12px;">I'm a dad. If I'm going to run 26.2 miles, I want every pound raised to do something I can actually point at. <strong>£3,500</strong> is what I've committed to, and every donation gets Whizz Kidz closer to their vision of a society in which every young wheelchair user is mobile, enabled and included.</p>
+          <a href="#donate" class="btn" style="margin-top:16px;">DONATE →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="approach">
+      <div class="approach-title">THE APPROACH</div>
+      <div class="approach-grid">
+        <div class="approach-card">
+          <div class="num">01</div>
+          <div class="label">THIS PAGE</div>
+          <p>Training progress and fundraising tracked publicly — accountability built in from day one.</p>
+        </div>
+        <div class="approach-card">
+          <div class="num">02</div>
+          <div class="label">WORKPLACE</div>
+          <p>Exploring matched-funding options and colleague sponsorship through my employer.</p>
+        </div>
+        <div class="approach-card">
+          <div class="num">03</div>
+          <div class="label">EVENTS</div>
+          <p>Planned local fundraisers — details will appear in the calendar below.</p>
+        </div>
+        <div class="approach-card">
+          <div class="num">04</div>
+          <div class="label">NETWORK</div>
+          <p>Sponsorship outreach across professional contacts, suppliers and contractors.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DONATE / COUNTER ============ -->
+<section id="donate" class="counter-section">
+  <div class="wrap">
+    <div class="eyebrow">② &nbsp; THE COUNTER</div>
+    <div class="counter-mega" id="counter-mega">£0</div>
+    <div class="counter-sub" id="counter-sub">of £3,500 · 0%</div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        <div class="progress-flag" style="left: 25%;"><span class="label">£875</span></div>
+        <div class="progress-flag" style="left: 50%;"><span class="label">£1,750</span></div>
+        <div class="progress-flag" style="left: 75%;"><span class="label">£2,625</span></div>
+        <div class="progress-runner" id="progress-runner" style="left: calc(0% - 12px);">🏃</div>
+      </div>
+      <div class="progress-ends">
+        <span>● START</span>
+        <span>FINISH ●</span>
+      </div>
+    </div>
+
+    <div class="donate-cta">
+      <div class="donate-card">
+        <div class="scrawl">every donation moves the needle —</div>
+        <div id="donate-area">
+          <a href="https://www.justgiving.com/page/chasing-twenty-six" target="_blank" rel="noopener" class="donate-btn">DONATE VIA JUSTGIVING →</a>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;margin-top:12px;opacity:0.6;">100% of donations go directly to Whizz Kidz</div>
+        </div>
+
+        <!-- QR code + share row -->
+        <div style="margin-top:24px;padding-top:20px;border-top:2px dashed var(--ink);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;">
+          <div style="text-align:center;">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://www.justgiving.com/page/chasing-twenty-six&color=1a1612&bgcolor=f4ead5&margin=0"
+              alt="QR code to JustGiving donation page"
+              width="120"
+              height="120"
+              style="display:block;border:2px solid var(--ink);background:var(--cream);" />
+            <div style="font-family:'Bungee',sans-serif;font-size:10px;margin-top:6px;letter-spacing:0.1em;">SCAN TO DONATE</div>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div style="font-family:'Bungee',sans-serif;font-size:10px;letter-spacing:0.2em;margin-bottom:10px;">SHARE THE PAGE</div>
+            <div class="share-row">
+              <a class="share-btn" id="share-whatsapp" target="_blank" rel="noopener" title="Share on WhatsApp">WhatsApp</a>
+              <a class="share-btn" id="share-x" target="_blank" rel="noopener" title="Share on X">X</a>
+              <a class="share-btn" id="share-linkedin" target="_blank" rel="noopener" title="Share on LinkedIn">LinkedIn</a>
+              <a class="share-btn" id="share-email" title="Share by email">Email</a>
+              <button class="share-btn" id="share-copy" title="Copy link">Copy link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRAINING ============ -->
+<section class="paper-grain px">
+  <div class="wrap">
+    <div style="text-align:center;">
+      <div style="font-family:'Bungee',sans-serif;color:var(--red);letter-spacing:0.3em;font-size:12px;margin-bottom:12px;">③ &nbsp; THE TRAINING</div>
+      <h2 class="training-title">MILES IN<br><span class="red scribble">THE BANK.</span></h2>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card red">
+        <div class="label">TOTAL MILES</div>
+        <div class="big" id="stat-miles">0.0</div>
+        <div class="note" id="stat-miles-note">building the base</div>
+      </div>
+      <div class="stat-card ink">
+        <div class="label">SESSIONS</div>
+        <div class="big" id="stat-sessions">0</div>
+        <div class="note">and counting...</div>
+      </div>
+      <div class="stat-card mustard">
+        <div class="label">LONGEST RUN</div>
+        <div class="big"><span id="stat-longest">0.0</span><small>mi</small></div>
+        <div class="note">personal best</div>
+      </div>
+    </div>
+
+    <div class="log-header">
+      <h3>THE LOGBOOK</h3>
+      <span>recent → older</span>
+    </div>
+    <div id="log-list"></div>
+  </div>
+</section>
+
+<!-- ============ EVENTS ============ -->
+<section class="events">
+  <div class="wrap">
+    <div class="events-eyebrow">④ &nbsp; THE EVENTS</div>
+    <h2 class="events-title"><span class="red">COME</span><br><span class="italic">say hello.</span></h2>
+    <p class="events-sub">fundraisers, group runs, bake sales, the lot →</p>
+    <div id="events-list"></div>
+  </div>
+</section>
+
+<!-- ============ ADMIN ============ -->
+<section class="paper-grain px">
+  <div class="wrap">
+    <button class="admin-toggle" id="admin-toggle">⚙ EDITOR PANEL</button>
+    <div class="admin-panel" id="admin-panel">
+      <div class="admin-card">
+        <h4>+ NEW RUN</h4>
+        <input type="date" id="act-date">
+        <input type="number" step="0.1" placeholder="distance (mi)" id="act-distance">
+        <input type="text" placeholder="time e.g. 45:32" id="act-time">
+        <input type="url" placeholder="strava link" id="act-link">
+        <input type="text" placeholder="note" id="act-note">
+        <button class="btn-primary" id="btn-add-run">LOG IT</button>
+        <button class="btn-secondary" id="btn-remove-run">remove latest</button>
+      </div>
+
+      <div class="admin-card">
+        <h4>+ NEW EVENT</h4>
+        <input type="text" placeholder="event title" id="ev-title">
+        <input type="date" id="ev-date">
+        <textarea placeholder="description" id="ev-desc" rows="3"></textarea>
+        <button class="btn-primary" id="btn-add-event">ADD EVENT</button>
+        <button class="btn-secondary" id="btn-remove-event">remove latest</button>
+      </div>
+
+      <div class="admin-card mustard">
+        <h4>£ RAISED</h4>
+        <p class="desc">Manual counter — JustGiving widget shows the live total automatically when embedded.</p>
+        <input type="number" step="1" class="big-num" id="raised-input" value="0">
+        <p class="save">auto-saves ✓</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="big">26.2</div>
+  <div class="thanks">thank you for backing the campaign ❤</div>
+
+  <div class="footer-share">
+    <div class="footer-qr">
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.justgiving.com/page/chasing-twenty-six&color=1a1612&bgcolor=f4ead5&margin=0"
+        alt="QR code to JustGiving donation page"
+        width="90"
+        height="90"
+        style="border:2px solid var(--ink);background:var(--cream);" />
+      <div style="text-align:left;">
+        <div style="font-family:'Bungee',sans-serif;font-size:11px;letter-spacing:0.15em;color:var(--ink);">SCAN · SHARE · DONATE</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;margin-top:4px;color:var(--ink);">chasingtwentysix.vercel.app</div>
+      </div>
+    </div>
+    <div class="share-row" style="justify-content:center;">
+      <a class="share-btn" id="share-whatsapp-2" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="share-btn" id="share-x-2" target="_blank" rel="noopener">X</a>
+      <a class="share-btn" id="share-linkedin-2" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="share-btn" id="share-email-2">Email</a>
+      <button class="share-btn" id="share-copy-2">Copy link</button>
+    </div>
+  </div>
+
+  <div class="credit">Stephen Payne · London Marathon 2027 · Running for Whizz Kidz</div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ============ CONFIG ============ */
+  const GOAL = 3500;
+  const MARATHON_DATE = new Date('2027-04-25');
+
+  /* ============ STATE ============ */
+  let activities = [];
+  let events = [];
+  let raised = 0;
+
+  /* ============ STORAGE ============ */
+  function load() {
+    try { activities = JSON.parse(localStorage.getItem('mcp_activities') || '[]'); } catch (e) { activities = []; }
+    try { events = JSON.parse(localStorage.getItem('mcp_events') || '[]'); } catch (e) { events = []; }
+    try { raised = parseFloat(localStorage.getItem('mcp_raised')) || 0; } catch (e) { raised = 0; }
+  }
+  function saveActivities() { try { localStorage.setItem('mcp_activities', JSON.stringify(activities)); } catch (e) {} }
+  function saveEvents() { try { localStorage.setItem('mcp_events', JSON.stringify(events)); } catch (e) {} }
+  function saveRaised() { try { localStorage.setItem('mcp_raised', String(raised)); } catch (e) {} }
+
+  /* ============ HELPERS ============ */
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  /* ============ RENDER ============ */
+  function renderTicker() {
+    const days = Math.max(0, Math.ceil((MARATHON_DATE - new Date()) / (1000 * 60 * 60 * 24)));
+    const segment = '<span style="display:inline-block;padding-right:32px;"><span class="red">●</span> LONDON · 26.2 · 2027 &nbsp;&nbsp;◆&nbsp;&nbsp; <span class="mustard">£3,500 OR BUST</span> &nbsp;&nbsp;◆&nbsp;&nbsp; EVERY MILE COUNTS &nbsp;&nbsp;◆&nbsp;&nbsp; <span class="red">RUN. RAISE. REPEAT.</span> &nbsp;&nbsp;◆&nbsp;&nbsp; ' + days + ' DAYS TO GO &nbsp;&nbsp;◆&nbsp;&nbsp;</span>';
+    document.getElementById('ticker').innerHTML = segment + segment;
+    document.getElementById('days-to-go').textContent = days;
+  }
+
+  function renderCounter() {
+    const pct = Math.min(100, (raised / GOAL) * 100);
+    document.getElementById('counter-mega').textContent = '£' + Math.round(raised).toLocaleString();
+    document.getElementById('counter-sub').textContent = 'of £' + GOAL.toLocaleString() + ' · ' + pct.toFixed(0) + '%';
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-runner').style.left = 'calc(' + pct + '% - 12px)';
+  }
+
+  function renderStats() {
+    const totalMiles = activities.reduce((s, a) => s + (a.distance || 0), 0);
+    const longest = activities.reduce((m, a) => Math.max(m, a.distance || 0), 0);
+    document.getElementById('stat-miles').textContent = totalMiles.toFixed(1);
+    document.getElementById('stat-miles-note').textContent = totalMiles >= 26.2 ? 'a marathon in the legs ✓' : 'building the base';
+    document.getElementById('stat-sessions').textContent = activities.length;
+    document.getElementById('stat-longest').textContent = longest.toFixed(1);
+  }
+
+  function renderLog() {
+    const el = document.getElementById('log-list');
+    if (activities.length === 0) {
+      el.innerHTML = '<div class="log-empty"><div class="hand">log loading... or empty.</div><div class="mono">recent runs will appear here</div></div>';
+      return;
+    }
+    el.innerHTML = activities.map((a, idx) => `
+      <div class="log-row">
+        <div>
+          <div class="date-big">${fmtDate(a.date)}</div>
+          <div class="session-num">SESSION #${activities.length - idx}</div>
+        </div>
+        <div>
+          <div class="dist">${escapeHtml(a.distance)}</div>
+          <div class="dist-label">MILES</div>
+        </div>
+        <div class="time">${a.time ? '⏱ ' + escapeHtml(a.time) : ''}</div>
+        <div class="col-note">${a.note ? '"' + escapeHtml(a.note) + '"' : ''}</div>
+        <div class="col-link">${a.link ? `<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">STRAVA↗</a>` : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderEvents() {
+    const el = document.getElementById('events-list');
+    if (events.length === 0) {
+      el.innerHTML = '<div class="events-empty"><div class="hand">events coming soon.</div><div class="mono">watch this space ✦</div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="events-grid">' + events.map(e => `
+      <div class="event-card">
+        <div class="date-badge">${fmtDate(e.date)}</div>
+        <h3>${escapeHtml(e.title)}</h3>
+        <p>${escapeHtml(e.desc || '')}</p>
+      </div>
+    `).join('') + '</div>';
+  }
+
+  function renderAll() {
+    renderCounter();
+    renderStats();
+    renderLog();
+    renderEvents();
+    document.getElementById('raised-input').value = raised;
+  }
+
+  /* ============ HANDLERS ============ */
+  document.getElementById('admin-toggle').addEventListener('click', function() {
+    const panel = document.getElementById('admin-panel');
+    panel.classList.toggle('open');
+    this.textContent = panel.classList.contains('open') ? '✕ CLOSE EDITOR' : '⚙ EDITOR PANEL';
+  });
+
+  document.getElementById('btn-add-run').addEventListener('click', function() {
+    const date = document.getElementById('act-date').value;
+    const distance = parseFloat(document.getElementById('act-distance').value);
+    if (!date || !distance) return;
+    activities.unshift({
+      id: Date.now(),
+      date: date,
+      distance: distance,
+      time: document.getElementById('act-time').value,
+      link: document.getElementById('act-link').value,
+      note: document.getElementById('act-note').value
+    });
+    saveActivities();
+    ['act-date','act-distance','act-time','act-link','act-note'].forEach(id => document.getElementById(id).value = '');
+    renderAll();
+  });
+
+  document.getElementById('btn-remove-run').addEventListener('click', function() {
+    if (activities.length === 0) return;
+    if (!confirm('Remove the most recent run?')) return;
+    activities.shift();
+    saveActivities();
+    renderAll();
+  });
+
+  document.getElementById('btn-add-event').addEventListener('click', function() {
+    const title = document.getElementById('ev-title').value;
+    const date = document.getElementById('ev-date').value;
+    if (!title || !date) return;
+    events.push({
+      id: Date.now(),
+      title: title,
+      date: date,
+      desc: document.getElementById('ev-desc').value
+    });
+    events.sort((a, b) => a.date.localeCompare(b.date));
+    saveEvents();
+    ['ev-title','ev-date','ev-desc'].forEach(id => document.getElementById(id).value = '');
+    renderAll();
+  });
+
+  document.getElementById('btn-remove-event').addEventListener('click', function() {
+    if (events.length === 0) return;
+    if (!confirm('Remove the last event in the list?')) return;
+    events.pop();
+    saveEvents();
+    renderAll();
+  });
+
+  document.getElementById('raised-input').addEventListener('input', function() {
+    raised = parseFloat(this.value) || 0;
+    saveRaised();
+    renderCounter();
+  });
+
+  /* ============ LIVE DATA ============ */
+  async function fetchLiveStats() {
+    try {
+      const r = await fetch('/api/stats');
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.ok) return;
+
+      // JustGiving overrides the manual counter when available
+      if (data.justgiving && typeof data.justgiving.raised === 'number' && data.justgiving.raised > 0) {
+        raised = data.justgiving.raised;
+        renderCounter();
+      }
+
+      // Strava overrides the manual activity log when available
+      if (data.strava && data.strava.recent && data.strava.recent.length > 0) {
+        activities = data.strava.recent.map(r => ({
+          id: r.id,
+          date: r.date,
+          distance: r.distance,
+          time: r.moving_time,
+          link: r.link,
+          note: r.name
+        }));
+        // Override stats with full totals from Strava (more accurate than 10-run sum)
+        document.getElementById('stat-miles').textContent = data.strava.total_miles.toFixed(1);
+        document.getElementById('stat-miles-note').textContent = data.strava.total_miles >= 26.2 ? 'a marathon in the legs ✓' : 'building the base';
+        document.getElementById('stat-sessions').textContent = data.strava.run_count;
+        document.getElementById('stat-longest').textContent = data.strava.longest_miles.toFixed(1);
+        renderLog();
+      }
+    } catch (err) {
+      // Silent fallback to local data — site still works
+      console.log('Live data unavailable, using local data:', err.message);
+    }
+  }
+
+  /* ============ SHARE BUTTONS ============ */
+  function wireShareButtons() {
+    const pageUrl = window.location.origin + window.location.pathname;
+    const jgUrl = 'https://www.justgiving.com/page/chasing-twenty-six';
+    const shareText = "I'm running the 2027 London Marathon for Whizz Kidz — every donation gets young wheelchair users closer to a life lived independently. Follow my training & donate:";
+    const fullShare = shareText + ' ' + pageUrl;
+
+    const wa = `https://wa.me/?text=${encodeURIComponent(fullShare)}`;
+    const x = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`;
+    const ln = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`;
+    const em = `mailto:?subject=${encodeURIComponent('London Marathon 2027 — for Whizz Kidz')}&body=${encodeURIComponent(fullShare)}`;
+
+    // Wire both donate-section and footer buttons
+    [['share-whatsapp', wa], ['share-whatsapp-2', wa],
+     ['share-x', x], ['share-x-2', x],
+     ['share-linkedin', ln], ['share-linkedin-2', ln],
+     ['share-email', em], ['share-email-2', em]].forEach(([id, href]) => {
+      const el = document.getElementById(id);
+      if (el) el.href = href;
+    });
+
+    // Copy link buttons
+    ['share-copy', 'share-copy-2'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pageUrl);
+          const original = btn.textContent;
+          btn.textContent = 'Copied ✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+        } catch (e) {
+          // Fallback for older browsers
+          prompt('Copy this link:', pageUrl);
+        }
+      });
+    });
+  }
+
+  /* ============ INIT ============ */
+  load();
+  renderTicker();
+  renderAll();
+  wireShareButtons();
+  fetchLiveStats(); // pull live data in background
+  setInterval(renderTicker, 60 * 60 * 1000); // refresh days-to-go hourly
+  setInterval(fetchLiveStats, 30 * 60 * 1000); // refresh live data every 30 mins
+})();
+</script>
+</body>
+</html>
