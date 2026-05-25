@@ -55,8 +55,13 @@ async function fetchStravaStats() {
   if (!actRes.ok) throw new Error('Strava activities fetch failed');
   const activities = await actRes.json();
 
-  // 3. Filter to runs only and compute stats
-  const runs = activities.filter(a => a.type === 'Run' || a.sport_type === 'Run');
+  // 3. Filter to runs only, from training start date onwards
+  const TRAINING_START = new Date('2026-05-24T00:00:00Z');
+  const runs = activities.filter(a => {
+    const isRun = a.type === 'Run' || a.sport_type === 'Run';
+    if (!isRun) return false;
+    return new Date(a.start_date) >= TRAINING_START;
+  });
 
   const metresToMiles = m => m / 1609.344;
 
@@ -142,4 +147,6 @@ async function fetchJustGivingTotal() {
     goal: goal || 3500,
     page_url: url
   };
+}
+
 }
