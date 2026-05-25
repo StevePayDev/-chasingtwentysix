@@ -117,37 +117,84 @@ async function fetchJustGivingTotal() {
 
   const r = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; ChasingTwentySix/1.0)',
-      'Accept': 'text/html'
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'en-GB,en;q=0.9'
     }
   });
 
   if (!r.ok) throw new Error(`JustGiving fetch failed: ${r.status}`);
   const html = await r.text();
 
-  // JustGiving pages embed totals in JSON-LD or data attributes.
-  // Try multiple patterns to find the £ raised.
   let raised = 0;
   let goal = 0;
+  let matched_pattern = null;
 
-  // Pattern 1: JSON-LD or embedded JSON state
-  const amountMatch = html.match(/"totalRaisedAmount"\s*:\s*"?£?([\d,.]+)"?/i)
-    || html.match(/"amountRaised"\s*:\s*"?£?([\d,.]+)"?/i)
-    || html.match(/"raisedAmount"\s*:\s*"?£?([\d,.]+)"?/i)
-    || html.match(/data-amount-raised="?£?([\d,.]+)"?/i)
-    || html.match(/£([\d,]+(?:\.\d{2})?)\s*(?:raised|of)/i);
+  // Try many patterns - JustGiving's HTML varies
+  const patterns = [
+    { name: 'totalRaisedAmount', re: /"totalRaisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'amountRaised', re: /"amountRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'raisedAmount', re: /"raisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'totalRaised', re: /"totalRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'donationSummary.totalAmount', re: /"donationSummary"[^}]*"totalAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'data-amount-raised', re: /data-amount-raised="?£?\s*([\d,.]+)"?/i },
+    { name: 'currentAmount', re: /"currentAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
+    { name: 'GBP-amount-of', re: /£([\d,]+(?:\.\d{2})?)\s*(?:raised|of)/i }
+  ];
 
-  if (amountMatch) raised = parseFloat(amountMatch[1].replace(/,/g, ''));
+  for (const p of patterns) {
+    const m = html.match(p.re);
+    if (m && parseFloat(m[1].replace(/,/g, '')) > 0) {
+      raised = parseFloat(m[1].replace(/,/g, ''));
+      matched_pattern = p.name;
+      break;
+    }
+  }
 
-  const goalMatch = html.match(/"targetAmount"\s*:\s*"?£?([\d,.]+)"?/i)
-    || html.match(/"goalAmount"\s*:\s*"?£?([\d,.]+)"?/i)
-    || html.match(/of\s+£([\d,]+(?:\.\d{2})?)/i);
+  const goalPatterns = [
+    /"targetAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i,
+    /"goalAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i,
+    /"target"\s*:\s*"?£?\s*([\d,.]+)"?/i,
+    /of\s+£([\d,]+(?:\.\d{2})?)/i
+  ];
 
-  if (goalMatch) goal = parseFloat(goalMatch[1].replace(/,/g, ''));
+  for (const re of goalPatterns) {
+    const m = html.match(re);
+    if (m) {
+      goal = parseFloat(m[1].replace(/,/g, ''));
+      if (goal > 0) break;
+    }
+  }
+
+  // Debug payload - shows snippets of the HTML so we can see what's actually there
+  // To enable, hit /api/stats?debug=1
+  const debug = process.env.DEBUG_JG || null;
 
   return {
     raised,
     goal: goal || 3500,
-    page_url: url
+    page_url: url,
+    matched_pattern,
+    _debug: {
+      html_length: html.length,
+      contains_pound: html.includes('£'),
+      contains_raised_word: html.toLowerCase().includes('raised'),
+      // Pull a 600-character window around the first mention of the donation amount
+      pound_context: extractPoundContext(html),
+      // Try to find any number that looks like a £ amount
+      first_money_phrases: findMoneyPhrases(html)
+    }
   };
+}
+
+function extractPoundContext(html) {
+  const idx = html.indexOf('£');
+  if (idx === -1) return null;
+  return html.substring(Math.max(0, idx - 100), idx + 300).replace(/\s+/g, ' ');
+}
+
+function findMoneyPhrases(html) {
+  // Find first 5 distinct £ amount mentions
+  const matches = html.match(/£\s*[\d,]+(?:\.\d{2})?/g) || [];
+  return [...new Set(matches)].slice(0, 10);
 }
