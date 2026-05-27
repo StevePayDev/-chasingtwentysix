@@ -130,23 +130,16 @@ async function fetchJustGivingTotal() {
   let goal = 0;
   let matched_pattern = null;
 
-  // PRIMARY METHOD: JustGiving renders the £ amounts in a predictable order
-  // in their page HTML. First we collect ALL distinct £ amounts on the page.
-  const allMatches = html.match(/£\s*[\d,]+(?:\.\d{1,2})?/g) || [];
-  const uniqueAmounts = [...new Set(allMatches)];
-  const parsed = uniqueAmounts
-    .map(s => parseFloat(s.replace(/[£,\s]/g, '')))
-    .filter(n => !isNaN(n));
-
-  // Observed pattern: first £ amount on the page is the target/goal,
-  // second is the amount raised. Tiers (£25, £50 etc) come later.
-  if (parsed.length >= 2) {
-    goal = parsed[0];
-    raised = parsed[1];
-    matched_pattern = 'money-phrase-order';
+  // PRIMARY: look for explicit "raised X of Y" pattern in the page text.
+  // JustGiving consistently renders this in their progress UI.
+  const raisedOfMatch = html.match(/£\s*([\d,]+(?:\.\d{2})?)\s*(?:raised|of)\s*£?\s*([\d,]+(?:\.\d{2})?)?/i);
+  if (raisedOfMatch) {
+    raised = parseFloat(raisedOfMatch[1].replace(/,/g, ''));
+    if (raisedOfMatch[2]) goal = parseFloat(raisedOfMatch[2].replace(/,/g, ''));
+    matched_pattern = 'raised-of-pattern';
   }
 
-  // FALLBACK: try named JSON patterns in case the layout changes
+  // SECONDARY: try JSON-embedded patterns
   if (raised === 0) {
     const patterns = [
       { name: 'totalRaisedAmount', re: /"totalRaisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
@@ -165,14 +158,35 @@ async function fetchJustGivingTotal() {
     }
   }
 
+  // FALLBACK: scan all £ amounts. Goal = max value, raised = second-largest
+  // distinct value (excluding suggested tier amounts like 25/50/100 if they
+  // happen to be the only matches).
+  const allMatches = html.match(/£\s*[\d,]+(?:\.\d{1,2})?/g) || [];
+  const uniqueAmounts = [...new Set(allMatches)]
+    .map(s => parseFloat(s.replace(/[£,\s]/g, '')))
+    .filter(n => !isNaN(n) && n > 0)
+    .sort((a, b) => b - a); // largest first
+
+  if (raised === 0 && uniqueAmounts.length >= 2) {
+    // The goal is usually the largest unless raised has exceeded it
+    goal = goal || uniqueAmounts[0];
+    raised = uniqueAmounts[1];
+    matched_pattern = matched_pattern || 'sorted-amounts-fallback';
+  }
+
+  if (goal === 0 && uniqueAmounts.length >= 1) {
+    goal = uniqueAmounts[0];
+  }
+
   return {
     raised,
     goal: goal || 3500,
     page_url: url,
     matched_pattern,
     _debug: {
-      unique_money_phrases: uniqueAmounts.slice(0, 10),
+      unique_money_phrases: [...new Set(allMatches)].slice(0, 10),
       html_length: html.length
     }
   };
 }
+F
