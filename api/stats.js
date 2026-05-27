@@ -130,52 +130,26 @@ async function fetchJustGivingTotal() {
   let goal = 0;
   let matched_pattern = null;
 
-  // PRIMARY: look for explicit "raised X of Y" pattern in the page text.
-  // JustGiving consistently renders this in their progress UI.
-  const raisedOfMatch = html.match(/£\s*([\d,]+(?:\.\d{2})?)\s*(?:raised|of)\s*£?\s*([\d,]+(?:\.\d{2})?)?/i);
-  if (raisedOfMatch) {
-    raised = parseFloat(raisedOfMatch[1].replace(/,/g, ''));
-    if (raisedOfMatch[2]) goal = parseFloat(raisedOfMatch[2].replace(/,/g, ''));
-    matched_pattern = 'raised-of-pattern';
-  }
-
-  // SECONDARY: try JSON-embedded patterns
-  if (raised === 0) {
-    const patterns = [
-      { name: 'totalRaisedAmount', re: /"totalRaisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-      { name: 'amountRaised', re: /"amountRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-      { name: 'raisedAmount', re: /"raisedAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-      { name: 'totalRaised', re: /"totalRaised"\s*:\s*"?£?\s*([\d,.]+)"?/i },
-      { name: 'currentAmount', re: /"currentAmount"\s*:\s*"?£?\s*([\d,.]+)"?/i }
-    ];
-    for (const p of patterns) {
-      const m = html.match(p.re);
-      if (m && parseFloat(m[1].replace(/,/g, '')) > 0) {
-        raised = parseFloat(m[1].replace(/,/g, ''));
-        matched_pattern = p.name;
-        break;
-      }
-    }
-  }
-
-  // FALLBACK: scan all £ amounts. Goal = max value, raised = second-largest
-  // distinct value (excluding suggested tier amounts like 25/50/100 if they
-  // happen to be the only matches).
+  // Collect all £ amounts on the page
   const allMatches = html.match(/£\s*[\d,]+(?:\.\d{1,2})?/g) || [];
-  const uniqueAmounts = [...new Set(allMatches)]
+  const uniqueAmounts = [...new Set(allMatches)];
+  const parsed = uniqueAmounts
     .map(s => parseFloat(s.replace(/[£,\s]/g, '')))
-    .filter(n => !isNaN(n) && n > 0)
-    .sort((a, b) => b - a); // largest first
+    .filter(n => !isNaN(n) && n > 0);
 
-  if (raised === 0 && uniqueAmounts.length >= 2) {
-    // The goal is usually the largest unless raised has exceeded it
-    goal = goal || uniqueAmounts[0];
-    raised = uniqueAmounts[1];
-    matched_pattern = matched_pattern || 'sorted-amounts-fallback';
-  }
-
-  if (goal === 0 && uniqueAmounts.length >= 1) {
-    goal = uniqueAmounts[0];
+  if (parsed.length >= 2) {
+    // Sort descending - largest first
+    const sorted = [...parsed].sort((a, b) => b - a);
+    // Goal is the largest amount, raised total is the second-largest
+    // (this works because the total raised is always between £0 and the goal,
+    // and individual donation amounts are typically smaller than the running total)
+    goal = sorted[0];
+    raised = sorted[1];
+    matched_pattern = 'sorted-amounts';
+  } else if (parsed.length === 1) {
+    goal = parsed[0];
+    raised = 0;
+    matched_pattern = 'goal-only';
   }
 
   return {
@@ -184,9 +158,8 @@ async function fetchJustGivingTotal() {
     page_url: url,
     matched_pattern,
     _debug: {
-      unique_money_phrases: [...new Set(allMatches)].slice(0, 10),
+      unique_money_phrases: uniqueAmounts.slice(0, 12),
       html_length: html.length
     }
   };
 }
-F
