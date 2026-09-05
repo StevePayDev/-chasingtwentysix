@@ -1,6 +1,8 @@
 // Vercel Serverless Function: /api/stats
-// Fetches live training totals from Strava and fundraising total from JustGiving.
-// Cached for 1 hour to stay well within Strava's rate limits.
+// Fetches live training totals from Garmin Connect and fundraising total from JustGiving.
+// Cached for 1 hour.
+
+import { GarminConnect } from 'garmin-connect';
 
 export default async function handler(req, res) {
   // Allow browser caching for 1 hour, then revalidate
@@ -8,74 +10,71 @@ export default async function handler(req, res) {
 
   // TEMP DIAGNOSTIC: use allSettled so one integration failing doesn't
   // hide the other's result, and log full details to Vercel function logs.
-  const [stravaResult, justgivingResult] = await Promise.allSettled([
-    fetchStravaStats(),
+  const [garminResult, justgivingResult] = await Promise.allSettled([
+    fetchGarminStats(),
     fetchJustGivingTotal()
   ]);
 
-  if (stravaResult.status === 'rejected') {
-    console.error('[stats] Strava failed:', stravaResult.reason);
+  if (garminResult.status === 'rejected') {
+    console.error('[stats] Garmin failed:', garminResult.reason);
   }
   if (justgivingResult.status === 'rejected') {
     console.error('[stats] JustGiving failed:', justgivingResult.reason);
   }
 
   res.status(200).json({
-    ok: stravaResult.status === 'fulfilled' || justgivingResult.status === 'fulfilled',
+    ok: garminResult.status === 'fulfilled' || justgivingResult.status === 'fulfilled',
     updated: new Date().toISOString(),
-    strava: stravaResult.status === 'fulfilled' ? stravaResult.value : null,
-    strava_error: stravaResult.status === 'rejected' ? stravaResult.reason.message : null,
+    garmin: garminResult.status === 'fulfilled' ? garminResult.value : null,
+    garmin_error: garminResult.status === 'rejected' ? garminResult.reason.message : null,
     justgiving: justgivingResult.status === 'fulfilled' ? justgivingResult.value : null,
     justgiving_error: justgivingResult.status === 'rejected' ? justgivingResult.reason.message : null
   });
 }
-// ============ STRAVA ============
+// ============ GARMIN ============
+//
+// Uses the unofficial `garmin-connect` package, which logs in with your real
+// Garmin Connect username/password (there is no public OAuth API for personal
+// projects). Two important caveats:
+//  - It cannot get past Garmin's MFA/2FA challenge — the account used here
+//    must have two-factor authentication turned OFF.
+//  - Every cold invocation logs in from scratch (Vercel functions don't keep
+//    the token between requests reliably), so this hits Garmin's login
+//    endpoint from a datacenter IP on roughly the same schedule the frontend
+//    polls (~every 30 min, and this response is itself cached for 1 hour).
+//    Repeated automated logins are a real risk factor for Garmin flagging or
+//    locking the account — watch for that if this goes live.
 
-async function fetchStravaStats() {
-  // 1. Refresh the access token using the long-lived refresh token
-  const tokenRes = await fetch('https://www.strava.com/api/v3/oauth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.STRAVA_CLIENT_ID,
-      client_secret: process.env.STRAVA_CLIENT_SECRET,
-      grant_type: 'refresh_token',
-      refresh_token: process.env.STRAVA_REFRESH_TOKEN
-    })
+async function fetchGarminStats() {
+  const GCClient = new GarminConnect({
+    username: process.env.GARMIN_USERNAME,
+    password: process.env.GARMIN_PASSWORD
   });
 
-  if (!tokenRes.ok) {
-    const body = await tokenRes.text().catch(() => '');
-    console.error('[stats] Strava token refresh HTTP', tokenRes.status, body);
-    throw new Error(`Strava token refresh failed (${tokenRes.status}): ${body}`);
+  try {
+    await GCClient.login();
+  } catch (err) {
+    console.error('[stats] Garmin login failed:', err.message);
+    throw new Error(`Garmin login failed: ${err.message}`);
   }
-  const tokenData = await tokenRes.json();
-  const accessToken = tokenData.access_token;
-  console.log('[stats] Strava token refresh OK, scope info in response:', JSON.stringify({
-    expires_at: tokenData.expires_at,
-    refresh_token_rotated: tokenData.refresh_token && tokenData.refresh_token !== process.env.STRAVA_REFRESH_TOKEN
-  }));
 
-  // 2. Fetch recent activities (last 200, plenty for marathon training)
-  const actRes = await fetch(
-    'https://www.strava.com/api/v3/athlete/activities?per_page=200',
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  if (!actRes.ok) {
-    const body = await actRes.text().catch(() => '');
-    console.error('[stats] Strava activities HTTP', actRes.status, body);
-    throw new Error(`Strava activities fetch failed (${actRes.status}): ${body}`);
+  // Last 200 activities, plenty for marathon training
+  let activities;
+  try {
+    activities = await GCClient.getActivities(0, 200);
+  } catch (err) {
+    console.error('[stats] Garmin getActivities failed:', err.message);
+    throw new Error(`Garmin activities fetch failed: ${err.message}`);
   }
-  const activities = await actRes.json();
-  // 3. Filter to runs only, from training start date onwards
+
+  // Filter to runs only, from training start date onwards
   // Use local date string comparison to avoid any timezone edge cases
   const TRAINING_START = '2026-05-24'; // YYYY-MM-DD, inclusive
   const runs = activities.filter(a => {
-    const isRun = a.type === 'Run' || a.sport_type === 'Run';
+    const isRun = a.activityType && a.activityType.typeKey && a.activityType.typeKey.includes('running');
     if (!isRun) return false;
-    // start_date_local is in the athlete's local timezone, format: 2026-05-24T09:00:00Z
-    const runDate = (a.start_date_local || a.start_date || '').slice(0, 10);
+    // startTimeLocal format: "2026-05-24 09:00:00"
+    const runDate = (a.startTimeLocal || '').slice(0, 10);
     return runDate >= TRAINING_START;
   });
 
@@ -85,16 +84,16 @@ async function fetchStravaStats() {
   const longestMiles = runs.reduce((m, r) => Math.max(m, metresToMiles(r.distance)), 0);
   const runCount = runs.length;
 
-  // 4. Format the most recent 10 runs for the logbook
+  // Format the most recent 10 runs for the logbook
   const recent = runs.slice(0, 10).map(r => ({
-    id: r.id,
-    date: r.start_date_local.slice(0, 10),
-    name: r.name,
+    id: r.activityId,
+    date: r.startTimeLocal.slice(0, 10),
+    name: r.activityName,
     distance: parseFloat(metresToMiles(r.distance).toFixed(2)),
-    moving_time: formatTime(r.moving_time),
-    elevation_gain_m: Math.round(r.total_elevation_gain || 0),
-    average_pace: r.average_speed ? formatPace(r.average_speed) : null,
-    link: `https://www.strava.com/activities/${r.id}`
+    moving_time: formatTime(r.duration),
+    elevation_gain_m: Math.round(r.elevationGain || 0),
+    average_pace: r.averageSpeed ? formatPace(r.averageSpeed) : null,
+    link: `https://connect.garmin.com/modern/activity/${r.activityId}`
   }));
 
   return {
@@ -104,7 +103,6 @@ async function fetchStravaStats() {
     recent
   };
 }
-
 function formatTime(seconds) {
   if (!seconds) return '';
   const h = Math.floor(seconds / 3600);
@@ -113,7 +111,6 @@ function formatTime(seconds) {
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
-
 function formatPace(metresPerSec) {
   // Convert to minutes per mile
   const secPerMile = 1609.344 / metresPerSec;
@@ -140,7 +137,6 @@ async function fetchJustGivingTotal() {
     throw new Error(`JustGiving fetch failed: ${r.status}`);
   }
   const html = await r.text();
-
   let raised = 0;
   let goal = 0;
   let matched_pattern = null;
