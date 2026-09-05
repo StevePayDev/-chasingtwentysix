@@ -6,27 +6,29 @@ export default async function handler(req, res) {
   // Allow browser caching for 1 hour, then revalidate
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
 
-  try {
-    const [strava, justgiving] = await Promise.all([
-      fetchStravaStats(),
-      fetchJustGivingTotal()
-    ]);
+  // TEMP DIAGNOSTIC: use allSettled so one integration failing doesn't
+  // hide the other's result, and log full details to Vercel function logs.
+  const [stravaResult, justgivingResult] = await Promise.allSettled([
+    fetchStravaStats(),
+    fetchJustGivingTotal()
+  ]);
 
-    res.status(200).json({
-      ok: true,
-      updated: new Date().toISOString(),
-      strava,
-      justgiving
-    });
-  } catch (err) {
-    res.status(200).json({
-      ok: false,
-      error: err.message,
-      updated: new Date().toISOString()
-    });
+  if (stravaResult.status === 'rejected') {
+    console.error('[stats] Strava failed:', stravaResult.reason);
   }
-}
+  if (justgivingResult.status === 'rejected') {
+    console.error('[stats] JustGiving failed:', justgivingResult.reason);
+  }
 
+  res.status(200).json({
+    ok: stravaResult.status === 'fulfilled' || justgivingResult.status === 'fulfilled',
+    updated: new Date().toISOString(),
+    strava: stravaResult.status === 'fulfilled' ? stravaResult.value : null,
+    strava_error: stravaResult.status === 'rejected' ? stravaResult.reason.message : null,
+    justgiving: justgivingResult.status === 'fulfilled' ? justgivingResult.value : null,
+    justgiving_error: justgivingResult.status === 'rejected' ? justgivingResult.reason.message : null
+  });
+}
 // ============ STRAVA ============
 
 async function fetchStravaStats() {
@@ -42,9 +44,17 @@ async function fetchStravaStats() {
     })
   });
 
-  if (!tokenRes.ok) throw new Error('Strava token refresh failed');
+  if (!tokenRes.ok) {
+    const body = await tokenRes.text().catch(() => '');
+    console.error('[stats] Strava token refresh HTTP', tokenRes.status, body);
+    throw new Error(`Strava token refresh failed (${tokenRes.status}): ${body}`);
+  }
   const tokenData = await tokenRes.json();
   const accessToken = tokenData.access_token;
+  console.log('[stats] Strava token refresh OK, scope info in response:', JSON.stringify({
+    expires_at: tokenData.expires_at,
+    refresh_token_rotated: tokenData.refresh_token && tokenData.refresh_token !== process.env.STRAVA_REFRESH_TOKEN
+  }));
 
   // 2. Fetch recent activities (last 200, plenty for marathon training)
   const actRes = await fetch(
@@ -52,9 +62,12 @@ async function fetchStravaStats() {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
-  if (!actRes.ok) throw new Error('Strava activities fetch failed');
+  if (!actRes.ok) {
+    const body = await actRes.text().catch(() => '');
+    console.error('[stats] Strava activities HTTP', actRes.status, body);
+    throw new Error(`Strava activities fetch failed (${actRes.status}): ${body}`);
+  }
   const activities = await actRes.json();
-
   // 3. Filter to runs only, from training start date onwards
   // Use local date string comparison to avoid any timezone edge cases
   const TRAINING_START = '2026-05-24'; // YYYY-MM-DD, inclusive
@@ -108,7 +121,6 @@ function formatPace(metresPerSec) {
   const sec = Math.round(secPerMile % 60);
   return `${min}:${String(sec).padStart(2, '0')}/mi`;
 }
-
 // ============ JUSTGIVING ============
 
 async function fetchJustGivingTotal() {
@@ -123,7 +135,10 @@ async function fetchJustGivingTotal() {
     }
   });
 
-  if (!r.ok) throw new Error(`JustGiving fetch failed: ${r.status}`);
+  if (!r.ok) {
+    console.error('[stats] JustGiving HTTP', r.status);
+    throw new Error(`JustGiving fetch failed: ${r.status}`);
+  }
   const html = await r.text();
 
   let raised = 0;
