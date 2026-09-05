@@ -443,7 +443,7 @@
         <input type="date" id="act-date">
         <input type="number" step="0.1" placeholder="distance (mi)" id="act-distance">
         <input type="text" placeholder="time e.g. 45:32" id="act-time">
-        <input type="url" placeholder="strava link" id="act-link">
+        <input type="url" placeholder="garmin link" id="act-link">
         <input type="text" placeholder="note" id="act-note">
         <button class="btn-primary" id="btn-add-run">LOG IT</button>
         <button class="btn-secondary" id="btn-remove-run">remove latest</button>
@@ -576,7 +576,7 @@
         </div>
         <div class="time">${a.time ? '⏱ ' + escapeHtml(a.time) : ''}</div>
         <div class="col-note">${a.note ? '"' + escapeHtml(a.note) + '"' : ''}</div>
-        <div class="col-link">${a.link ? `<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">STRAVA↗</a>` : ''}</div>
+        <div class="col-link">${a.link ? `<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener">GARMIN↗</a>` : ''}</div>
       </div>
     `).join('');
   }
@@ -672,7 +672,7 @@
       const r = await fetch('/api/stats');
       if (!r.ok) { console.log('Live data fetch: HTTP', r.status); return; }
       const data = await r.json();
-      if (data.strava_error) console.log('Strava live data unavailable:', data.strava_error);
+      if (data.garmin_error) console.log('Garmin live data unavailable:', data.garmin_error);
       if (data.justgiving_error) console.log('JustGiving live data unavailable:', data.justgiving_error);
       if (!data.ok) return;
 
@@ -682,9 +682,9 @@
         renderCounter();
       }
 
-      // Strava overrides the manual activity log when available
-      if (data.strava && data.strava.recent && data.strava.recent.length > 0) {
-        activities = data.strava.recent.map(r => ({
+      // Garmin overrides the manual activity log when available
+      if (data.garmin && data.garmin.recent && data.garmin.recent.length > 0) {
+        activities = data.garmin.recent.map(r => ({
           id: r.id,
           date: r.date,
           distance: r.distance,
@@ -692,11 +692,11 @@
           link: r.link,
           note: r.name
         }));
-        // Override stats with full totals from Strava (more accurate than 10-run sum)
-        document.getElementById('stat-miles').textContent = data.strava.total_miles.toFixed(1);
-        document.getElementById('stat-miles-note').textContent = data.strava.total_miles >= 26.2 ? 'a marathon in the legs ✓' : 'building the base';
-        document.getElementById('stat-sessions').textContent = data.strava.run_count;
-        document.getElementById('stat-longest').textContent = data.strava.longest_miles.toFixed(1);
+        // Override stats with full totals from Garmin (more accurate than 10-run sum)
+        document.getElementById('stat-miles').textContent = data.garmin.total_miles.toFixed(1);
+        document.getElementById('stat-miles-note').textContent = data.garmin.total_miles >= 26.2 ? 'a marathon in the legs ✓' : 'building the base';
+        document.getElementById('stat-sessions').textContent = data.garmin.run_count;
+        document.getElementById('stat-longest').textContent = data.garmin.longest_miles.toFixed(1);
         renderLog();
       }
     } catch (err) {
