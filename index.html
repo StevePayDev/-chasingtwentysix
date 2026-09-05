@@ -670,8 +670,10 @@
   async function fetchLiveStats() {
     try {
       const r = await fetch('/api/stats');
-      if (!r.ok) return;
+      if (!r.ok) { console.log('Live data fetch: HTTP', r.status); return; }
       const data = await r.json();
+      if (data.strava_error) console.log('Strava live data unavailable:', data.strava_error);
+      if (data.justgiving_error) console.log('JustGiving live data unavailable:', data.justgiving_error);
       if (!data.ok) return;
 
       // JustGiving overrides the manual counter when available
